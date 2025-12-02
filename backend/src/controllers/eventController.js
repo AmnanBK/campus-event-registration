@@ -89,3 +89,84 @@ export const createEvent = async (req, res) => {
     });
   }
 };
+
+export const updateEvent = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      title,
+      description,
+      event_date,
+      start_time,
+      end_time,
+      location,
+      quota,
+      poster_url,
+    } = req.body;
+
+    const organizer_id = req.user.id;
+
+    let startTimestamp, endTimestamp;
+
+    if (event_date && start_time && end_time) {
+      const startDateTimeString = `${event_date}T${start_time}:00`;
+      const endDateTimeString = `${event_date}T${end_time}:00`;
+
+      startTimestamp = new Date(startDateTimeString).toISOString();
+      endTimestamp = new Date(endDateTimeString).toISOString();
+
+      if (new Date(endTimestamp) <= new Date(startTimestamp)) {
+        return res.status(400).json({
+          status: 'fail',
+          message: 'Waktu selesai harus lebih akhir dari waktu mulai.',
+        });
+      }
+    }
+
+    if (quota && (quota < 1 || quota > 5000)) {
+      return res.status(400).json({
+        status: 'fail',
+        message: 'Kuota peserta harus antara 1 sampai 5000.',
+      });
+    }
+
+    const updates = {
+      title,
+      description,
+      location,
+      quota,
+      poster_url,
+    };
+
+    if (startTimestamp) updates.start_time = startTimestamp;
+    if (endTimestamp) updates.end_time = endTimestamp;
+
+    const { data, error } = await supabase
+      .from('events')
+      .update(updates)
+      .eq('id', id)
+      .eq('organizer_id', organizer_id)
+      .select();
+
+    if (error) throw error;
+
+    if (data.length === 0) {
+      return res.status(404).json({
+        status: 'fail',
+        message:
+          'Acara tidak ditemukan atau Anda tidak memiliki akses untuk mengedit ini.',
+      });
+    }
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Data acara berhasil diperbarui',
+      data: data[0],
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: 'error',
+      message: err.message,
+    });
+  }
+};

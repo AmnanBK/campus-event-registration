@@ -34,18 +34,20 @@
 
 // export default App
 
-
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
-// --- DUMMY PAGES (Buat ngetes Routing dulu) ---
 const LoginDummy = () => <h2>Halaman Login (Belum diimplementasi)</h2>;
-const MhsDashboard = () => <h2>Dashboard Mahasiswa</h2>;
-const OrganizerDashboard = () => <h2>Dashboard Penyelenggara</h2>;
-const AdminDashboard = () => <h2>Dashboard Kampus</h2>;
-// ----------------------------------------------
+const DashboardMahasiswa = () => <h2>Dashboard Mahasiswa</h2>;
+const DashboardPenyelenggara = () => <h2>Dashboard Penyelenggara</h2>;
+const DashboardKampus = () => <h2>Dashboard Kampus</h2>;
 
 function App() {
   return (
@@ -56,21 +58,27 @@ function App() {
           <Route path="/login" element={<LoginDummy />} />
 
           {/* Role: Mahasiswa */}
-          <Route element={<ProtectedRoute allowedRoles={['mahasiswa']} />}>
-            <Route path="/" element={<MhsDashboard />} />
+          <Route element={<ProtectedRoute allowedRoles={['student']} />}>
+            <Route path="/" element={<DashboardMahasiswa />} />
             <Route path="/events" element={<h2>Daftar Event</h2>} />
             <Route path="/history" element={<h2>Riwayat Pendaftaran</h2>} />
           </Route>
 
           {/* Role: Penyelenggara */}
-          <Route path="/organizer" element={<ProtectedRoute allowedRoles={['penyelenggara']} />}>
-            <Route path="dashboard" element={<OrganizerDashboard />} />
+          <Route
+            path="/organizer"
+            element={<ProtectedRoute allowedRoles={['organizer']} />}
+          >
+            <Route path="dashboard" element={<DashboardPenyelenggara />} />
             <Route path="create-event" element={<h2>Buat Event Baru</h2>} />
           </Route>
 
           {/* Role: Manajemen Kampus */}
-          <Route path="/admin" element={<ProtectedRoute allowedRoles={['kampus']} />}>
-            <Route path="dashboard" element={<AdminDashboard />} />
+          <Route
+            path="/admin"
+            element={<ProtectedRoute allowedRoles={['admin']} />}
+          >
+            <Route path="dashboard" element={<DashboardKampus />} />
             <Route path="users" element={<h2>Kelola User</h2>} />
           </Route>
 

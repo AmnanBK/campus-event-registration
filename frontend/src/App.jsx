@@ -44,11 +44,10 @@ import {
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
-import Navbar from './components/Navbar';
+import StudentDashboard from './pages/StudentDashboard';
 
-const DashboardMahasiswa = () => <h2>Dashboard Mahasiswa</h2>;
-const DashboardPenyelenggara = () => <h2>Dashboard Penyelenggara</h2>;
-const DashboardKampus = () => <h2>Dashboard Kampus</h2>;
+const OrganizerDashboard = () => <h2>Dashboard Penyelenggara</h2>;
+const AdminDashboard = () => <h2>Dashboard Kampus</h2>;
 
 function App() {
   return (
@@ -60,7 +59,7 @@ function App() {
 
           {/* Role: Mahasiswa */}
           <Route element={<ProtectedRoute allowedRoles={['student']} />}>
-            <Route path="/" element={<DashboardMahasiswa />} />
+            <Route path="/" element={<StudentDashboard />} />
             <Route path="/events" element={<h2>Daftar Event</h2>} />
             <Route path="/history" element={<h2>Riwayat Pendaftaran</h2>} />
           </Route>
@@ -70,7 +69,7 @@ function App() {
             path="/organizer"
             element={<ProtectedRoute allowedRoles={['organizer']} />}
           >
-            <Route path="dashboard" element={<DashboardPenyelenggara />} />
+            <Route path="dashboard" element={<OrganizerDashboard />} />
             <Route path="create-event" element={<h2>Buat Event Baru</h2>} />
           </Route>
 
@@ -79,7 +78,7 @@ function App() {
             path="/admin"
             element={<ProtectedRoute allowedRoles={['admin']} />}
           >
-            <Route path="dashboard" element={<DashboardKampus />} />
+            <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="users" element={<h2>Kelola User</h2>} />
           </Route>
 

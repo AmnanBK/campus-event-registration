@@ -4,7 +4,7 @@ import calendarIcon from '../assets/icons/ic-calendar.svg';
 import clockIcon from '../assets/icons/ic-clock.svg';
 import locationIcon from '../assets/icons/ic-location.svg';
 
-const EventCard = ({ event }) => {
+const EventCard = ({ event, onClick }) => {
   return (
     <div className="bg-white rounded-card border border-neutral-border shadow-sm hover:shadow-md transition-shadow flex flex-col h-full overflow-hidden">
       
@@ -56,7 +56,7 @@ const EventCard = ({ event }) => {
           </div>
         </div>
 
-        <button className="w-full h-btn rounded-btn bg-primary-main text-white text-[14px] hover:bg-primary-hover transition-colors">
+        <button onClick={onClick} className="w-full h-btn rounded-btn bg-primary-main text-white text-[14px] hover:bg-primary-hover transition-colors">
           Lihat Detail & Daftar
         </button>
       </div>

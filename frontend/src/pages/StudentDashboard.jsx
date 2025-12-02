@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Navbar from '../components/Navbar';
 import EventCard from '../components/EventCard';
 import searchIcon from '../assets/icons/ic-search.svg'; 
+import EventDetailModal from '../components/EventDetailModal';
 
 const StudentDashboard = () => {
   const dummyEvents = [
@@ -15,7 +16,8 @@ const StudentDashboard = () => {
       organizer: "UKM Basket",
       quotaFilled: 87,
       quotaTotal: 100,
-      image: "https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2090&auto=format&fit=crop"
+      image: "https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2090&auto=format&fit=crop",
+      is_registered: false
     },
     {
       id: 2,
@@ -27,7 +29,8 @@ const StudentDashboard = () => {
       organizer: "HIMATIF",
       quotaFilled: 120,
       quotaTotal: 200,
-      image: "https://images.unsplash.com/photo-1475721027767-pfa536 MBE1?q=80&w=2070&auto=format&fit=crop"
+      image: "https://images.unsplash.com/photo-1475721027767-pfa536 MBE1?q=80&w=2070&auto=format&fit=crop",
+      is_registered: true
     },
     {
       id: 3,
@@ -39,13 +42,45 @@ const StudentDashboard = () => {
       organizer: "DSC Chapter",
       quotaFilled: 25,
       quotaTotal: 30,
-      image: "https://images.unsplash.com/photo-1586717791821-3f44a5638d48?q=80&w=2070&auto=format&fit=crop"
+      image: "https://images.unsplash.com/photo-1586717791821-3f44a5638d48?q=80&w=2070&auto=format&fit=crop",
+      is_registered: false
     }
   ];
 
   const [activeTab, setActiveTab] = useState('daftar');
   // STATE BARU UNTUK PENCARIAN
   const [searchQuery, setSearchQuery] = useState('');
+
+  // STATE MODAL
+  const [selectedEvent, setSelectedEvent] = useState(null); // Menyimpan object event yang diklik
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // HANDLER UNTUK BUKA MODAL
+  const handleOpenModal = (event) => {
+    setSelectedEvent(event);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedEvent(null);
+  };
+
+  // 4. HANDLER AKSI TOMBOL
+  const handleRegister = (eventId) => {
+    alert(`Berhasil mendaftar ke event ID: ${eventId}`);
+    // Nanti di sini panggil API POST /register
+    handleCloseModal();
+  };
+
+  const handleCancelRegistration = (eventId) => {
+    // Confirm dulu biar aman
+    if (window.confirm("Yakin ingin membatalkan pendaftaran?")) {
+      alert(`Pendaftaran event ID: ${eventId} dibatalkan.`);
+      // Nanti di sini panggil API DELETE /register
+      handleCloseModal();
+    }
+  };
 
   // LOGIKA FILTER (Case Insensitive)
   // Cek apakah Judul atau Penyelenggara mengandung kata kunci
@@ -61,6 +96,14 @@ const StudentDashboard = () => {
     <div className="min-h-screen bg-primary-surface w-full font-sans">
       
       <Navbar />
+
+      <EventDetailModal 
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        event={selectedEvent}
+        onRegister={handleRegister}
+        onCancel={handleCancelRegistration}
+      />
 
       <main className="pt-[100px] px-4 md:px-8 pb-10 max-w-7xl mx-auto">
         
@@ -118,7 +161,7 @@ const StudentDashboard = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {/* Looping menggunakan 'filteredEvents', BUKAN 'dummyEvents' */}
                 {filteredEvents.map((event) => (
-                  <EventCard key={event.id} event={event} />
+                  <EventCard key={event.id} event={event} onClick={() => handleOpenModal(event)} />
                 ))}
               </div>
             ) : (

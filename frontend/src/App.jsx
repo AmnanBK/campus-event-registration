@@ -43,8 +43,9 @@ import {
 } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import LoginPage from './pages/LoginPage';
+import Navbar from './components/Navbar';
 
-const LoginDummy = () => <h2>Halaman Login (Belum diimplementasi)</h2>;
 const DashboardMahasiswa = () => <h2>Dashboard Mahasiswa</h2>;
 const DashboardPenyelenggara = () => <h2>Dashboard Penyelenggara</h2>;
 const DashboardKampus = () => <h2>Dashboard Kampus</h2>;
@@ -55,7 +56,7 @@ function App() {
       <Router>
         <Routes>
           {/* Public Route */}
-          <Route path="/login" element={<LoginDummy />} />
+          <Route path="/login" element={<LoginPage/>} />
 
           {/* Role: Mahasiswa */}
           <Route element={<ProtectedRoute allowedRoles={['student']} />}>

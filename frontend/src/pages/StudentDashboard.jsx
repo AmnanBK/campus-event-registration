@@ -3,6 +3,7 @@ import Navbar from '../components/Navbar';
 import EventCard from '../components/EventCard';
 import searchIcon from '../assets/icons/ic-search.svg'; 
 import EventDetailModal from '../components/EventDetailModal';
+import HistoryTable from '../components/HistoryTable';
 
 const StudentDashboard = () => {
   const dummyEvents = [
@@ -46,6 +47,23 @@ const StudentDashboard = () => {
       is_registered: false
     }
   ];
+
+  const [dummyHistory, setDummyHistory] = useState([
+    {
+      id: 'reg-1',
+      title: "Turnamen Basket Antar Fakultas",
+      date: "25 Nov 2025",
+      organizer: "UKM Basket",
+      status: "Terdaftar"
+    },
+    {
+      id: 'reg-2',
+      title: "Seminar Nasional AI",
+      date: "26 Nov 2025",
+      organizer: "HIMATIF",
+      status: "Terdaftar"
+    }
+  ]);
 
   const [activeTab, setActiveTab] = useState('daftar');
   // STATE BARU UNTUK PENCARIAN
@@ -135,28 +153,29 @@ const StudentDashboard = () => {
         </div>
 
         {/* Search Bar */}
-        <div className="mb-8 w-full">
-          <div className="bg-white border border-neutral-border rounded-xl shadow-sm flex items-center h-[50px] px-4 w-full focus-within:ring-2 focus-within:ring-primary-main/20 focus-within:border-primary-main transition-all">
-            
-            <div className="flex-shrink-0 mr-3">
-              <img src={searchIcon} alt="Search" className="h-5 w-5 opacity-40" />
-            </div>
-
-            <input
-              type="text"
-              // Hubungkan dengan State
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-full bg-transparent border-none outline-none text-neutral-main placeholder-neutral-secondary/60 text-body"
-              placeholder="Cari acara berdasarkan nama atau penyelenggara..."
-            />
-          </div>
-        </div>
 
         {/* Grid Event */}
         {activeTab === 'daftar' ? (
           <>
             {/* Cek apakah hasil pencarian ada? */}
+              <div className="mb-8 w-full">
+                <div className="bg-white border border-neutral-border rounded-xl shadow-sm flex items-center h-[50px] px-4 w-full focus-within:ring-2 focus-within:ring-primary-main/20 focus-within:border-primary-main transition-all">
+                  
+                  <div className="flex-shrink-0 mr-3">
+                    <img src={searchIcon} alt="Search" className="h-5 w-5 opacity-40" />
+                  </div>
+
+                  <input
+                    type="text"
+                    // Hubungkan dengan State
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full h-full bg-transparent border-none outline-none text-neutral-main placeholder-neutral-secondary/60 text-body"
+                    placeholder="Cari acara berdasarkan nama atau penyelenggara..."
+                  />
+                </div>
+              </div>
+              
             {filteredEvents.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {/* Looping menggunakan 'filteredEvents', BUKAN 'dummyEvents' */}
@@ -174,8 +193,11 @@ const StudentDashboard = () => {
             )}
           </>
         ) : (
-          <div className="text-center py-20 bg-white rounded-card border border-neutral-border shadow-sm">
-            <p className="text-neutral-secondary">Belum ada riwayat pendaftaran.</p>
+          <div className="overflow-x-auto pb-4">
+             <HistoryTable 
+               data={dummyHistory} 
+               onCancel={handleCancelRegistration} 
+             />
           </div>
         )}
 

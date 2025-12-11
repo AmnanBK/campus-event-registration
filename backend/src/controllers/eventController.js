@@ -170,3 +170,65 @@ export const updateEvent = async (req, res) => {
     });
   }
 };
+
+export const deleteEvent = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const organizer_id = req.user.id;
+
+    const { data: eventData, error: eventError } = await supabase
+      .from('events')
+      .select('id')
+      .eq('id', id)
+      .eq('organizer_id', organizer_id)
+      .single();
+
+    if (eventError || !eventData) {
+      return res.status(404).json({
+        status: 'fail',
+        message: 'Acara tidak ditemukan atau Anda tidak memiliki akses.',
+      });
+    }
+
+    const { count, error: regError } = await supabase
+      .from('registrations')
+      .select('*', { count: 'exact', head: true })
+      .eq('event_id', id);
+
+    if (regError) throw regError;
+
+    if (count > 0) {
+      const { error: updateError } = await supabase
+        .from('events')
+        .update({ status: 'cancelled' })
+        .eq('id', id);
+
+      if (updateError) throw updateError;
+
+      return res.status(200).json({
+        status: 'success',
+        message:
+          'Acara memiliki pendaftar. Status diubah menjadi "cancelled" (Soft Delete).',
+        action: 'soft_delete',
+      });
+    } else {
+      const { error: deleteError } = await supabase
+        .from('events')
+        .delete()
+        .eq('id', id);
+
+      if (deleteError) throw deleteError;
+
+      return res.status(200).json({
+        status: 'success',
+        message: 'Acara belum ada pendaftar. Data berhasil dihapus permanen.',
+        action: 'hard_delete',
+      });
+    }
+  } catch (err) {
+    res.status(500).json({
+      status: 'error',
+      message: err.message,
+    });
+  }
+};

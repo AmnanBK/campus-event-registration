@@ -347,3 +347,80 @@ export const exportParticipantsCSV = async (req, res) => {
     });
   }
 };
+
+export const getAllEvents = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 6;
+    const search = req.query.search || '';
+
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    let query = supabase
+      .from('events')
+      .select('*, organizer:users(name)', { count: 'exact' })
+      .order('created_at', { ascending: false });
+
+    if (search) {
+      query = query.ilike('title', `%${search}%`);
+    }
+
+    query = query.range(from, to);
+
+    const { data, error, count } = await query;
+
+    if (error) throw error;
+
+    const formattedEvents = data.map((event) => {
+      const startObj = new Date(event.start_time);
+      const endObj = new Date(event.end_time);
+
+      const dateString = startObj.toLocaleDateString('id-ID', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      });
+
+      const timeString = `${startObj.toLocaleTimeString('id-ID', {
+        hour: '2-digit',
+        minute: '2-digit',
+      })} - ${endObj.toLocaleTimeString('id-ID', {
+        hour: '2-digit',
+        minute: '2-digit',
+      })} WIB`;
+
+      return {
+        id: event.id,
+        title: event.title,
+        organizer_name: event.organizer?.name || 'Unknown Organizer',
+        description: event.description,
+        location: event.location,
+        quota_total: event.quota,
+        quota_filled: 0,
+        poster_url: event.poster_url,
+        status: event.status,
+        display_date: dateString,
+        display_time: timeString,
+        start_time: event.start_time,
+        end_time: event.end_time,
+      };
+    });
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        events: formattedEvents,
+        pagination: {
+          currentPage: page,
+          itemsPerPage: limit,
+          totalItems: count,
+          totalPages: Math.ceil(count / limit),
+        },
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: err.message });
+  }
+};

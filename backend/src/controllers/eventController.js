@@ -232,3 +232,60 @@ export const deleteEvent = async (req, res) => {
     });
   }
 };
+
+export const getEventParticipants = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const organizer_id = req.user.id;
+
+    const { data: eventData, error: eventError } = await supabase
+      .from('events')
+      .select('id')
+      .eq('id', id)
+      .eq('organizer_id', organizer_id)
+      .single();
+
+    if (eventError || !eventData) {
+      return res.status(403).json({
+        status: 'fail',
+        message: 'Akses ditolak. Event ini bukan milik Anda.',
+      });
+    }
+
+    const { data, error } = await supabase
+      .from('registrations')
+      .select(
+        `
+        registered_at,
+        users (
+          id,
+          name,
+          email,
+          nim
+        )
+      `
+      )
+      .eq('event_id', id)
+      .order('registered_at', { ascending: false });
+
+    if (error) throw error;
+
+    const formattedData = data.map((item) => ({
+      user_id: item.users.id,
+      name: item.users.name,
+      email: item.users.email,
+      nim: item.users.nim,
+      registered_at: item.registered_at,
+    }));
+
+    res.status(200).json({
+      status: 'success',
+      data: formattedData,
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: 'error',
+      message: err.message,
+    });
+  }
+};

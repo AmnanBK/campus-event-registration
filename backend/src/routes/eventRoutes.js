@@ -1,5 +1,6 @@
 import express from 'express';
 import {
+  getAllEvents,
   createEvent,
   updateEvent,
   deleteEvent,
@@ -9,6 +10,8 @@ import {
 import { protect } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
+
+router.get('/', getAllEvents);
 
 router.post('/', protect, createEvent);
 router.put('/:id', protect, updateEvent);

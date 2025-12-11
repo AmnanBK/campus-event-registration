@@ -206,7 +206,7 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, initialData }) => {
             type="submit"
             className="px-6 h-[40px] rounded-btn bg-primary-main text-white font-bold hover:bg-primary-hover transition-colors shadow-md"
           >
-            {initialData ? 'Simpan Perubahan' : 'Buat Acara'}
+            {initialData ? 'Simpan' : 'Buat Acara'}
           </button>
         </div>
 

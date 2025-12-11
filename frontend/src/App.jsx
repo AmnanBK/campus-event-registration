@@ -45,8 +45,8 @@ import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import StudentDashboard from './pages/StudentDashboard';
+import OrganizerDashboard from './pages/OrganizerDashboard';
 
-const OrganizerDashboard = () => <h2>Dashboard Penyelenggara</h2>;
 const AdminDashboard = () => <h2>Dashboard Kampus</h2>;
 
 function App() {

@@ -424,3 +424,82 @@ export const getAllEvents = async (req, res) => {
     res.status(500).json({ status: 'error', message: err.message });
   }
 };
+
+export const getEventDetail = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const currentUser = req.user;
+
+    const { data: event, error: eventError } = await supabase
+      .from('events')
+      .select('*, organizer:users(name)')
+      .eq('id', id)
+      .single();
+
+    if (eventError || !event) {
+      return res.status(404).json({
+        status: 'fail',
+        message: 'Acara tidak ditemukan',
+      });
+    }
+
+    const { count: quotaFilled, error: countError } = await supabase
+      .from('registrations')
+      .select('*', { count: 'exact', head: true })
+      .eq('event_id', id);
+
+    if (countError) throw countError;
+
+    let isRegistered = false;
+    let registrationId = null;
+
+    if (currentUser) {
+      const { data: userReg, error: regError } = await supabase
+        .from('registrations')
+        .select('id')
+        .eq('event_id', id)
+        .eq('user_id', currentUser.id)
+        .maybeSingle();
+
+      if (userReg) {
+        isRegistered = true;
+        registrationId = userReg.id;
+      }
+    }
+
+    const startObj = new Date(event.start_time);
+    const endObj = new Date(event.end_time);
+
+    const formattedEvent = {
+      id: event.id,
+      title: event.title,
+      description: event.description,
+      location: event.location,
+      organizer: {
+        name: event.organizer?.name || 'Unknown',
+      },
+      quota_total: event.quota,
+      quota_filled: quotaFilled || 0,
+      poster_url: event.poster_url,
+      status: event.status,
+      date_formatted: startObj.toLocaleDateString('id-ID', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      }),
+      time_formatted: `${startObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} - ${endObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB`,
+      user_registration: {
+        is_registered: isRegistered,
+        registration_id: registrationId,
+      },
+    };
+
+    res.status(200).json({
+      status: 'success',
+      data: formattedEvent,
+    });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: err.message });
+  }
+};

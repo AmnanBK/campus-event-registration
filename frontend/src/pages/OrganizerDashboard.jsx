@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import Navbar from '../components/Navbar';
 import OrganizerEventTable from '../components/OrganizerEventTable';
+import EventFormModal from '../components/EventFormModal';
+import Swal from 'sweetalert2';
 
 // Import Icons untuk Stats
 import calendarIcon from '../assets/icons/ic-calendar.svg';
@@ -25,7 +27,10 @@ const OrganizerDashboard = () => {
       time: "09:00 - 12:00 WIB",
       quotaFilled: 150,
       quotaTotal: 200,
-      status: "Berlangsung"
+      status: "Berlangsung",
+      date_raw: "2025-11-25",
+      start_time_raw: "09:00",
+      end_time_raw: "12:00"
     },
     {
       id: 2,
@@ -34,7 +39,10 @@ const OrganizerDashboard = () => {
       time: "09:00 - 12:00 WIB",
       quotaFilled: 30,
       quotaTotal: 30,
-      status: "Berlangsung"
+      status: "Berlangsung",
+      date_raw: "2025-12-07",
+      start_time_raw: "09:00",
+      end_time_raw: "12:00"
     },
     {
       id: 3,
@@ -43,9 +51,15 @@ const OrganizerDashboard = () => {
       time: "16:00 - 23:00 WIB",
       quotaFilled: 150,
       quotaTotal: 200,
-      status: "Berlangsung"
+      status: "Berlangsung",
+      date_raw: "2025-11-30",
+      start_time_raw: "16:00",
+      end_time_raw: "23:00"
     }
   ]);
+
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState(null);
 
   // HANDLERS (Placeholder)
   const handleView = (id) => alert(`Lihat detail event ID: ${id}`);
@@ -55,12 +69,71 @@ const OrganizerDashboard = () => {
       setEvents(events.filter(e => e.id !== id));
     }
   };
-  const handleCreateEvent = () => alert("Buka form buat acara baru");
+ 
+  const handleCreateEvent = () => {
+    setEditingEvent(null); // Mode Create
+    setIsFormOpen(true);
+  };
+
+  const handleEditClick = (id) => {
+    const eventToEdit = events.find(e => e.id === id);
+    if (eventToEdit) {
+      setEditingEvent(eventToEdit); // Mode Edit
+      setIsFormOpen(true);
+    }
+  };
+
+  const handleFormSubmit = (data) => {
+    
+    // Tutup modal dulu biar rapi
+    setIsFormOpen(false);
+
+    // Tampilkan Loading (Opsional, biar keren)
+    Swal.fire({
+      title: 'Menyimpan Data...',
+      timer: 1000,
+      didOpen: () => { Swal.showLoading() }
+    }).then(() => {
+      
+      // LOGIC SIMPAN DATA (SAMA KAYAK SEBELUMNYA)
+      if (editingEvent) {
+        const updatedEvents = events.map(ev => 
+          ev.id === editingEvent.id ? { ...ev, ...data } : ev
+        );
+        setEvents(updatedEvents);
+        
+        // --- SUKSES EDIT ---
+        Swal.fire({
+          icon: 'success',
+          title: 'Berhasil Diperbarui!',
+          text: `Data acara "${data.title}" telah disimpan.`,
+          confirmButtonColor: '#003366', // Warna Primary Kampus
+        });
+
+      } else {
+        // --- SUKSES CREATE ---
+        Swal.fire({
+          icon: 'success',
+          title: 'Acara Dibuat!',
+          text: `Acara "${data.title}" siap dipublikasikan.`,
+          confirmButtonColor: '#003366', // Warna Primary Kampus
+        });
+      }
+
+    });
+  };
 
   return (
     <div className="min-h-screen bg-primary-surface w-full font-sans">
       
       <Navbar />
+
+      <EventFormModal 
+        isOpen={isFormOpen}
+        onClose={() => setIsFormOpen(false)}
+        onSubmit={handleFormSubmit}
+        initialData={editingEvent}
+      />
 
       <main className="pt-[100px] px-4 md:px-8 pb-10 max-w-7xl mx-auto">
         

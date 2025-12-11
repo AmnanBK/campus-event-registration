@@ -61,3 +61,39 @@ export const registerEvent = async (req, res) => {
     res.status(500).json({ status: 'error', message: err.message });
   }
 };
+
+export const cancelRegistration = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user_id = req.user.id;
+
+    const { data: registration, error: fetchError } = await supabase
+      .from('registrations')
+      .select('id, event_id')
+      .eq('id', id)
+      .eq('user_id', user_id)
+      .single();
+
+    if (fetchError || !registration) {
+      return res.status(404).json({
+        status: 'fail',
+        message:
+          'Data pendaftaran tidak ditemukan atau Anda tidak memiliki akses.',
+      });
+    }
+
+    const { error: deleteError } = await supabase
+      .from('registrations')
+      .delete()
+      .eq('id', id);
+
+    if (deleteError) throw deleteError;
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Pendaftaran dibatalkan',
+    });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: err.message });
+  }
+};

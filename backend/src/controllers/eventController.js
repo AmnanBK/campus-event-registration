@@ -1,4 +1,5 @@
 import supabase from '../config/supabase.js';
+import { Parser } from 'json2csv';
 
 export const createEvent = async (req, res) => {
   try {
@@ -282,6 +283,63 @@ export const getEventParticipants = async (req, res) => {
       status: 'success',
       data: formattedData,
     });
+  } catch (err) {
+    res.status(500).json({
+      status: 'error',
+      message: err.message,
+    });
+  }
+};
+
+export const exportParticipantsCSV = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const organizer_id = req.user.id;
+
+    const { data: eventData, error: eventError } = await supabase
+      .from('events')
+      .select('title')
+      .eq('id', id)
+      .eq('organizer_id', organizer_id)
+      .single();
+
+    if (eventError || !eventData) {
+      return res.status(403).json({
+        status: 'fail',
+        message: 'Akses ditolak. Event ini bukan milik Anda.',
+      });
+    }
+
+    const { data, error } = await supabase
+      .from('registrations')
+      .select(
+        `
+        registered_at,
+        users ( name, email, nim )
+      `
+      )
+      .eq('event_id', id)
+      .order('registered_at', { ascending: true });
+
+    if (error) throw error;
+
+    const participants = data.map((item) => ({
+      Nama: item.users.name,
+      Email: item.users.email,
+      NIM: item.users.nim || '-',
+      'Waktu Daftar': new Date(item.registered_at).toLocaleString('id-ID'),
+    }));
+
+    const fields = ['Nama', 'Email', 'NIM', 'Waktu Daftar'];
+
+    const json2csvParser = new Parser({ fields });
+    const csv = json2csvParser.parse(participants);
+
+    const filename = `participants-${eventData.title.replace(/ /g, '_')}.csv`;
+
+    res.header('Content-Type', 'text/csv');
+    res.attachment(filename);
+    return res.send(csv);
   } catch (err) {
     res.status(500).json({
       status: 'error',

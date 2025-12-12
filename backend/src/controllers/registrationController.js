@@ -97,3 +97,58 @@ export const cancelRegistration = async (req, res) => {
     res.status(500).json({ status: 'error', message: err.message });
   }
 };
+
+export const getRegistrationHistory = async (req, res) => {
+  try {
+    const user_id = req.user.id;
+
+    const { data, error } = await supabase
+      .from('registrations')
+      .select(
+        `
+        id,
+        event_id,
+        events (
+          title,
+          start_time,
+          status,
+          organizer:users ( name )
+        )
+      `
+      )
+      .eq('user_id', user_id)
+      .order('registered_at', { ascending: false });
+
+    if (error) throw error;
+
+    const formattedHistory = data.map((item) => {
+      const eventDate = new Date(item.events.start_time);
+      const displayDate = eventDate.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      });
+
+      let statusLabel = 'Terdaftar';
+      if (item.events.status === 'cancelled') {
+        statusLabel = 'Event Dibatalkan';
+      }
+
+      return {
+        registration_id: item.id,
+        event_id: item.event_id,
+        event_title: item.events.title,
+        organizer_name: item.events.organizer?.name || 'Unknown',
+        start_time: item.events.start_time,
+        display_date: displayDate,
+      };
+    });
+
+    res.status(200).json({
+      status: 'success',
+      data: formattedHistory,
+    });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: err.message });
+  }
+};

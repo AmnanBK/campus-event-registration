@@ -1,9 +1,16 @@
 import express from 'express';
-import { createOrganizer } from '../controllers/adminController.js';
+import {
+  createOrganizer,
+  getAdminStats,
+  getOrganizersList,
+} from '../controllers/adminController.js';
 import { protect, restrictTo } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
 
-router.post('/organizers', protect, restrictTo('admin'), createOrganizer);
+router.use(protect, restrictTo('admin'));
+router.post('/organizers', createOrganizer);
+router.get('/stats', getAdminStats);
+router.get('/organizers', getOrganizersList);
 
 export default router;

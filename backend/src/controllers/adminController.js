@@ -49,3 +49,80 @@ export const createOrganizer = async (req, res) => {
     res.status(500).json({ status: 'error', message: err.message });
   }
 };
+
+export const getAdminStats = async (req, res) => {
+  try {
+    const [events, participants, organizers] = await Promise.all([
+      supabase.from('events').select('*', { count: 'exact', head: true }),
+
+      supabase
+        .from('registrations')
+        .select('*', { count: 'exact', head: true }),
+
+      supabase
+        .from('users')
+        .select('*', { count: 'exact', head: true })
+        .eq('role', 'organizer'),
+    ]);
+
+    if (events.error || participants.error || organizers.error) {
+      throw new Error('Gagal mengambil data statistik');
+    }
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        total_events: events.count,
+        total_participants: participants.count,
+        total_organizers: organizers.count,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: err.message });
+  }
+};
+
+export const getOrganizersList = async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select(
+        `
+        id,
+        name,
+        email,
+        events (
+          id,
+          registrations (count)
+        )
+      `
+      )
+      .eq('role', 'organizer');
+
+    if (error) throw error;
+
+    const formattedOrganizers = data.map((org) => {
+      const totalEvents = org.events.length;
+
+      const totalParticipants = org.events.reduce((sum, event) => {
+        const count = event.registrations[0]?.count || 0;
+        return sum + count;
+      }, 0);
+
+      return {
+        id: org.id,
+        name: org.name,
+        email: org.email,
+        total_events: totalEvents,
+        total_participants: totalParticipants,
+      };
+    });
+
+    res.status(200).json({
+      status: 'success',
+      data: formattedOrganizers,
+    });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: err.message });
+  }
+};

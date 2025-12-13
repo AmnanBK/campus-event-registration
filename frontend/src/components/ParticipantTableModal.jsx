@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api'; 
 import Swal from 'sweetalert2';
 
-const ParticipantTableModal = ({ isOpen, onClose, eventId, eventTitle, quota }) => {
+const ParticipantTableModal = ({ isOpen, onClose, eventId, eventTitle, eventDate, quota }) => {
   const [participants, setParticipants] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     if (isOpen && eventId) {
@@ -42,13 +43,58 @@ const ParticipantTableModal = ({ isOpen, onClose, eventId, eventTitle, quota }) 
     }) + ', ' + date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
   };
 
-  const handleExport = () => {
-    Swal.fire({
-      icon: 'info',
-      title: 'Segera Hadir',
-      text: 'Fitur download CSV akan segera diaktifkan.',
-      confirmButtonColor: '#003366'
-    });
+  const handleExport = async () => {
+    if (participants.length === 0) {
+      Swal.fire({
+        icon: 'info', 
+        title: 'Belum Ada Peserta',
+        text: 'Tidak ada data peserta untuk diunduh saat ini.',
+        confirmButtonColor: '#003366'
+      });
+      return;
+    }
+    
+    try {
+      setIsExporting(true); 
+
+      const response = await api.get(`/events/${eventId}/export`, {
+        responseType: 'blob', 
+      });
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      
+      const link = document.createElement('a');
+      link.href = url;
+      
+      const cleanTitle = eventTitle ? eventTitle.replace(/[^a-zA-Z0-9]/g, '_') : 'event';
+      const dateSuffix = eventDate ? `-${eventDate}` : '';
+      
+      link.setAttribute('download', `Peserta-${cleanTitle}${dateSuffix}.csv`);
+      
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      
+      window.URL.revokeObjectURL(url);
+
+      const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+      });
+      Toast.fire({
+        icon: 'success',
+        title: 'File CSV berhasil diunduh'
+      });
+
+    } catch (error) {
+      console.error("Gagal export csv:", error);
+      Swal.fire('Gagal', 'Terjadi kesalahan saat mengunduh file.', 'error');
+    } finally {
+      setIsExporting(false); 
+    }
   };
 
   if (!isOpen) return null;

@@ -231,6 +231,7 @@ const OrganizerDashboard = () => {
         onClose={() => setIsParticipantModalOpen(false)}
         eventId={viewingEvent?.id} // Kirim ID event ke modal buat fetch API
         eventTitle={viewingEvent?.title}
+        eventDate={viewingEvent?.date_raw}
         quota={`${viewingEvent?.quotaFilled || 0}/${viewingEvent?.quotaTotal || 0}`}
       />
 

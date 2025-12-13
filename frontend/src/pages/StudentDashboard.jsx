@@ -1,79 +1,80 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import EventCard from '../components/EventCard';
 import searchIcon from '../assets/icons/ic-search.svg'; 
-import EventDetailModal from '../components/EventDetailModal';
-import HistoryTable from '../components/HistoryTable';
+import EventDetailModal from '../components/EventDetailModal'; 
+import HistoryTable from '../components/HistoryTable'; 
+import api from '../services/api';
+import Swal from 'sweetalert2';
 
 const StudentDashboard = () => {
-  const dummyEvents = [
-    {
-      id: 1,
-      title: "Turnamen Basket Antar Fakultas",
-      description: "Kompetisi basket tahunan untuk semua mahasiswa. Daftar tim minimal 5 orang.",
-      date: "Senin, 25 November 2025",
-      time: "09:00 - 12:00 WIB",
-      location: "GOR UNY",
-      organizer: "UKM Basket",
-      quotaFilled: 87,
-      quotaTotal: 100,
-      image: "https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2090&auto=format&fit=crop",
-      is_registered: false
-    },
-    {
-      id: 2,
-      title: "Seminar Nasional AI",
-      description: "Membahas masa depan kecerdasan buatan dalam dunia industri 4.0 bersama pakar.",
-      date: "Selasa, 26 November 2025",
-      time: "08:00 - 15:00 WIB",
-      location: "Auditorium UPN",
-      organizer: "HIMATIF",
-      quotaFilled: 120,
-      quotaTotal: 200,
-      image: "https://images.unsplash.com/photo-1475721027767-pfa536 MBE1?q=80&w=2070&auto=format&fit=crop",
-      is_registered: true
-    },
-    {
-      id: 3,
-      title: "Workshop UI/UX Design",
-      description: "Belajar dasar-dasar desain antarmuka aplikasi menggunakan Figma.",
-      date: "Rabu, 27 November 2025",
-      time: "13:00 - 16:00 WIB",
-      location: "Lab Komputer 3",
-      organizer: "DSC Chapter",
-      quotaFilled: 25,
-      quotaTotal: 30,
-      image: "https://images.unsplash.com/photo-1586717791821-3f44a5638d48?q=80&w=2070&auto=format&fit=crop",
-      is_registered: false
-    }
-  ];
-
-  const [dummyHistory, setDummyHistory] = useState([
-    {
-      id: 'reg-1',
-      title: "Turnamen Basket Antar Fakultas",
-      date: "25 Nov 2025",
-      organizer: "UKM Basket",
-      status: "Terdaftar"
-    },
-    {
-      id: 'reg-2',
-      title: "Seminar Nasional AI",
-      date: "26 Nov 2025",
-      organizer: "HIMATIF",
-      status: "Terdaftar"
-    }
-  ]);
+  const [events, setEvents] = useState([]); 
+  const [history, setHistory] = useState([]); 
+  const [isLoading, setIsLoading] = useState(true);
 
   const [activeTab, setActiveTab] = useState('daftar');
-  // STATE BARU UNTUK PENCARIAN
   const [searchQuery, setSearchQuery] = useState('');
 
-  // STATE MODAL
-  const [selectedEvent, setSelectedEvent] = useState(null); // Menyimpan object event yang diklik
+  const [selectedEvent, setSelectedEvent] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // HANDLER UNTUK BUKA MODAL
+  const loadData = async () => {
+    try {
+      setIsLoading(true);
+
+      const [eventsRes, historyRes] = await Promise.all([
+        api.get('/events'),
+        api.get('/registrations/history') 
+      ]);
+
+      const eventsData = eventsRes.data.data.events || [];
+      const historyData = historyRes.data.data || [];
+
+      const formattedHistory = historyData.map(item => ({
+        id: item.registration_id, 
+        event_id: item.event_id, 
+        title: item.event_title,
+        date: item.display_date,
+        organizer: item.organizer_name,
+        status: 'Terdaftar' 
+      }));
+      setHistory(formattedHistory);
+
+      const registrationMap = {};
+      formattedHistory.forEach(h => {
+        registrationMap[h.event_id] = h.id; 
+      });
+
+      const formattedEvents = eventsData.map(item => ({
+        id: item.id,
+        title: item.title,
+        description: item.description,
+        date: item.display_date, 
+        time: item.display_time,
+        location: item.location,
+        organizer: item.organizer_name || "Penyelenggara", 
+        quotaFilled: item.quota_filled || 0,
+        quotaTotal: item.quota_total || item.quota,
+        image: item.poster_url || "https://placehold.co/600x400?text=No+Image",
+        
+        is_registered: !!registrationMap[item.id], 
+        registration_id: registrationMap[item.id] || null 
+      }));
+
+      setEvents(formattedEvents);
+
+    } catch (error) {
+      console.error("Gagal memuat data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []); 
+
+  // --- HANDLERS MODAL ---
   const handleOpenModal = (event) => {
     setSelectedEvent(event);
     setIsModalOpen(true);
@@ -81,28 +82,61 @@ const StudentDashboard = () => {
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
-    setSelectedEvent(null);
+    setTimeout(() => setSelectedEvent(null), 200);
   };
 
-  // 4. HANDLER AKSI TOMBOL
-  const handleRegister = (eventId) => {
-    alert(`Berhasil mendaftar ke event ID: ${eventId}`);
-    // Nanti di sini panggil API POST /register
+  // --- HANDLERS AKSI ---
+  
+  // 1. REGISTER
+  const handleRegister = async (eventId) => {
     handleCloseModal();
-  };
+    Swal.fire({ title: 'Mendaftar...', didOpen: () => Swal.showLoading() });
 
-  const handleCancelRegistration = (eventId) => {
-    // Confirm dulu biar aman
-    if (window.confirm("Yakin ingin membatalkan pendaftaran?")) {
-      alert(`Pendaftaran event ID: ${eventId} dibatalkan.`);
-      // Nanti di sini panggil API DELETE /register
-      handleCloseModal();
+    try {
+      await api.post(`/registrations/${eventId}`);
+      await loadData(); 
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'Berhasil Mendaftar!',
+        text: 'Cek tiket Anda di menu Riwayat.',
+        confirmButtonColor: '#003366'
+      });
+
+    } catch (error) {
+      const msg = error.response?.data?.message || 'Gagal mendaftar.';
+      Swal.fire('Gagal', msg, 'error');
     }
   };
 
-  // LOGIKA FILTER (Case Insensitive)
-  // Cek apakah Judul atau Penyelenggara mengandung kata kunci
-  const filteredEvents = dummyEvents.filter((event) => {
+  // 2. CANCEL
+  const handleCancelRegistration = async (registrationId) => {
+    handleCloseModal(); // Tutup modal kalau cancel dari modal
+    
+    const result = await Swal.fire({
+      title: 'Batalkan Pendaftaran?',
+      text: "Slot kuota akan dilepas dan Anda harus daftar ulang jika berubah pikiran.",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#B3261E',
+      cancelButtonColor: '#003366',
+      confirmButtonText: 'Ya, Batalkan'
+    });
+
+    if (result.isConfirmed) {
+      Swal.fire({ title: 'Memproses...', didOpen: () => Swal.showLoading() });
+      try {
+        await api.delete(`/registrations/${registrationId}`);
+        await loadData(); 
+        Swal.fire('Dibatalkan!', 'Pendaftaran dibatalkan.', 'success');
+      } catch (error) {
+        Swal.fire('Error', 'Gagal membatalkan.', 'error');
+      }
+    }
+  };
+
+  // FILTER
+  const filteredEvents = events.filter((event) => {
     const query = searchQuery.toLowerCase(); 
     return (
       event.title.toLowerCase().includes(query) || 
@@ -112,15 +146,24 @@ const StudentDashboard = () => {
 
   return (
     <div className="min-h-screen bg-primary-surface w-full font-sans">
-      
       <Navbar />
 
+      {/* --- INTEGRASI MODAL BARU --- */}
       <EventDetailModal 
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         event={selectedEvent}
-        onRegister={handleRegister}
-        onCancel={handleCancelRegistration}
+        
+        onRegister={(id) => handleRegister(id)} 
+        
+        onCancel={(eventId) => {
+           const evt = events.find(e => e.id === eventId);
+           if (evt && evt.registration_id) {
+             handleCancelRegistration(evt.registration_id);
+           } else {
+             Swal.fire('Error', 'Data registrasi tidak ditemukan', 'error');
+           }
+        }} 
       />
 
       <main className="pt-[100px] px-4 md:px-8 pb-10 max-w-7xl mx-auto">
@@ -130,77 +173,64 @@ const StudentDashboard = () => {
           <div className="bg-neutral-input p-1 rounded-full flex w-full border border-neutral-border/50">
             <button 
               onClick={() => setActiveTab('daftar')}
-              className={`flex-1 py-2.5 rounded-full text-body transition-all text-center ${
-                activeTab === 'daftar' 
-                ? 'bg-white text-neutral-main shadow-sm ring-1 ring-black/5' 
-                : 'text-neutral-secondary hover:text-neutral-main hover:bg-black/5'
-              }`}
+              className={`flex-1 py-2.5 rounded-full text-body font-bold transition-all text-center ${activeTab === 'daftar' ? 'bg-white shadow-sm ring-1 ring-black/5' : 'text-neutral-secondary hover:bg-black/5'}`}
             >
               Daftar Acara
             </button>
-
             <button 
               onClick={() => setActiveTab('riwayat')}
-              className={`flex-1 py-2.5 rounded-full text-body transition-all text-center ${
-                activeTab === 'riwayat' 
-                ? 'bg-white text-neutral-main shadow-sm ring-1 ring-black/5' 
-                : 'text-neutral-secondary hover:text-neutral-main hover:bg-black/5'
-              }`}
+              className={`flex-1 py-2.5 rounded-full text-body font-bold transition-all text-center ${activeTab === 'riwayat' ? 'bg-white shadow-sm ring-1 ring-black/5' : 'text-neutral-secondary hover:bg-black/5'}`}
             >
               Riwayat
             </button>
           </div>
         </div>
 
-        {/* Search Bar */}
-
-        {/* Grid Event */}
+        {/* CONTENT */}
         {activeTab === 'daftar' ? (
           <>
-            {/* Cek apakah hasil pencarian ada? */}
-              <div className="mb-8 w-full">
-                <div className="bg-white border border-neutral-border rounded-xl shadow-sm flex items-center h-[50px] px-4 w-full focus-within:ring-2 focus-within:ring-primary-main/20 focus-within:border-primary-main transition-all">
-                  
-                  <div className="flex-shrink-0 mr-3">
-                    <img src={searchIcon} alt="Search" className="h-5 w-5 opacity-40" />
-                  </div>
-
-                  <input
-                    type="text"
-                    // Hubungkan dengan State
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full h-full bg-transparent border-none outline-none text-neutral-main placeholder-neutral-secondary/60 text-body"
-                    placeholder="Cari acara berdasarkan nama atau penyelenggara..."
-                  />
-                </div>
+            <div className="mb-8 w-full">
+              <div className="bg-white border border-neutral-border rounded-xl shadow-sm flex items-center h-[50px] px-4 w-full focus-within:ring-2 focus-within:ring-primary-main/20">
+                <img src={searchIcon} alt="Search" className="h-5 w-5 opacity-40 mr-3" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full h-full bg-transparent border-none outline-none text-body"
+                  placeholder="Cari acara..."
+                />
               </div>
-              
-            {filteredEvents.length > 0 ? (
+            </div>
+            
+            {isLoading ? (
+               <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-main"></div></div>
+            ) : filteredEvents.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {/* Looping menggunakan 'filteredEvents', BUKAN 'dummyEvents' */}
                 {filteredEvents.map((event) => (
-                  <EventCard key={event.id} event={event} onClick={() => handleOpenModal(event)} />
+                  <EventCard 
+                    key={event.id} 
+                    event={event} 
+                    onClick={() => handleOpenModal(event)} 
+                    isRegistered={event.is_registered} 
+                  />
                 ))}
               </div>
             ) : (
-              // Tampilan jika pencarian tidak ditemukan
-              <div className="text-center py-20">
-                <p className="text-neutral-secondary text-lg">
-                  Tidak ditemukan acara dengan kata kunci "{searchQuery}"
-                </p>
-              </div>
+              <div className="text-center py-20 text-neutral-secondary">Tidak ditemukan acara.</div>
             )}
           </>
         ) : (
           <div className="overflow-x-auto pb-4">
-             <HistoryTable 
-               data={dummyHistory} 
-               onCancel={handleCancelRegistration} 
-             />
+             {isLoading ? (
+                <div className="flex justify-center py-10"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-main"></div></div>
+             ) : (
+               <HistoryTable 
+                 data={history} 
+                 onCancel={(regId) => handleCancelRegistration(regId)} 
+               />
+             )}
           </div>
         )}
-
       </main>
     </div>
   );

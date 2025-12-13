@@ -117,7 +117,8 @@ const EventDetailModal = ({ isOpen, onClose, event, onRegister, onCancel }) => {
           {isRegistered ? (
             // STATE: SUDAH TERDAFTAR -> TAMPILKAN TOMBOL MERAH (BATALKAN)
             <button 
-              onClick={() => onCancel(event.id)}
+              disabled={true}
+              // onClick={() => onCancel(event.id)}
               className="px-6 h-btn rounded-btn bg-feedback-danger text-white font-bold hover:bg-red-700 transition-colors shadow-md"
             >
               Batalkan Pendaftaran

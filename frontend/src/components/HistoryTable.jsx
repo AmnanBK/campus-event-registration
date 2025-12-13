@@ -45,7 +45,8 @@ const HistoryTable = ({ data, onCancel }) => {
               {/* Tombol Aksi */}
               <div className="col-span-1 flex justify-center">
                 <button 
-                  onClick={() => onCancel(item.id)}
+                  disabled={true}
+                  // onClick={() => onCancel(item.id)}
                   className="bg-feedback-danger text-white text-body px-4 py-2 rounded-btn hover:bg-red-700 transition-colors shadow-sm"
                 >
                   Batalkan

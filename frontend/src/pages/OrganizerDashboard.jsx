@@ -5,6 +5,7 @@ import EventFormModal from '../components/EventFormModal';
 import Swal from 'sweetalert2';
 import api from '../services/api.js';
 import DeleteConfirmModal from '../components/DeleteConfirmModal.jsx';
+import ParticipantTableModal from '../components/ParticipantTableModal.jsx';
 
 // Import Icons untuk Stats
 import calendarIcon from '../assets/icons/ic-calendar.svg';
@@ -26,6 +27,9 @@ const OrganizerDashboard = () => {
 
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
+
+  const [isParticipantModalOpen, setIsParticipantModalOpen] = useState(false);
+  const [viewingEvent, setViewingEvent] = useState(null); // Untuk simpan event mana yg lagi dilihat
 
   const confirmDelete = async () => {
     setIsDeleteOpen(false); // Tutup modal dulu
@@ -55,17 +59,29 @@ const OrganizerDashboard = () => {
     }
   };
 
+  const fetchStats = async () => {
+    try {
+      const response = await api.get('/organizers/dashboard/stats'); 
+      const data = response.data.data;
+
+      setStats({
+        totalEvents: data.total_events,
+        totalParticipants: data.total_participants,
+        fullEvents: data.total_events_full
+      });
+    } catch (error) {
+      console.error("Gagal ambil stats:", error);
+    }
+  };
+
   const fetchEvents = async () => {
     try {
       setIsLoading(true);
-      
-      // Panggil endpoint GET /events
-      const response = await api.get('/events'); 
-      const dataBackend = response.data.data.events; // Sesuaikan struktur response controller kamu
+    
+      const response = await api.get('/organizers/events'); 
+      const dataBackend = response.data.data || [];
 
-      // Mapping Data Backend -> Format Frontend
       const formattedEvents = dataBackend.map((item) => {
-        // Ambil jam saja dari format ISO (2025-11-25T09:00:00)
         const getHm = (isoString) => {
           if (!isoString) return '';
           const date = new Date(isoString);
@@ -73,56 +89,58 @@ const OrganizerDashboard = () => {
                  date.getMinutes().toString().padStart(2, '0');
         };
 
+        const getDisplayDate = (isoString) => {
+             if (!isoString) return '-';
+             const date = new Date(isoString);
+             return date.toLocaleDateString('id-ID', {
+                 day: 'numeric', month: 'short', year: 'numeric'
+             });
+        };
+
         return {
           id: item.id,
           title: item.title,
-          // Backend kamu sudah kasih format display_date ("Senin, 25 November...")
-          date: item.display_date, 
-          // Backend kamu sudah kasih format display_time ("09:00 - 12:00 WIB")
-          time: item.display_time, 
-          quotaFilled: item.quota_filled,
-          quotaTotal: item.quota_total,
-          status: item.status === 'open' ? 'Berlangsung' : item.status,
+          date: getDisplayDate(item.start_time), 
+          time: `${getHm(item.start_time)} - ${getHm(item.end_time)} WIB`, 
           
-          // Data RAW untuk keperluan Form Edit nanti
+          quotaFilled: item.quota_filled || 0, 
+          quotaTotal: item.quota_total,
+          
+          status: item.status_label, 
+          
           date_raw: item.start_time ? item.start_time.split('T')[0] : '',
           start_time_raw: getHm(item.start_time),
           end_time_raw: getHm(item.end_time),
-          description: item.description,
-          location: item.location,
+          description: item.description || '',
+          location: item.location || '',
           quota: item.quota_total
         };
       });
 
       setEvents(formattedEvents);
 
-      // Hitung Statistik Real-time dari data yang didapat
-      const totalPendaftar = formattedEvents.reduce((acc, curr) => acc + curr.quotaFilled, 0);
-      const acaraPenuh = formattedEvents.filter(e => e.quotaFilled >= e.quotaTotal).length;
-
-      setStats({
-        totalEvents: formattedEvents.length,
-        totalParticipants: totalPendaftar,
-        fullEvents: acaraPenuh
-      });
-
     } catch (error) {
       console.error("Error fetching events:", error);
-      Swal.fire('Gagal', 'Tidak dapat mengambil data acara dari server.', 'error');
+      Swal.fire('Gagal', 'Tidak dapat mengambil data acara.', 'error');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Panggil saat halaman pertama kali dibuka
   useEffect(() => {
+    fetchStats();
     fetchEvents();
   }, []);
 
   // HANDLERS (Placeholder)
-  const handleView = (id) => alert(`Lihat detail event ID: ${id}`);
-  const handleEdit = (id) => alert(`Edit event ID: ${id}`);
- const handleDeleteClick = (id) => {
+  const handleView = (id) => {
+    const eventToView = events.find(e => e.id === id);
+      if (eventToView) {
+          setViewingEvent(eventToView);
+          setIsParticipantModalOpen(true);
+      }
+    };
+  const handleDeleteClick = (id) => {
     setDeleteTargetId(id); 
     setIsDeleteOpen(true); 
   };
@@ -141,10 +159,8 @@ const OrganizerDashboard = () => {
   };
 
   const handleFormSubmit = async (data) => {
-    // 1. Tutup modal dulu
     setIsFormOpen(false);
 
-    // 2. Tampilkan Loading
     Swal.fire({
       title: 'Menyimpan Data...',
       allowOutsideClick: false,
@@ -152,16 +168,12 @@ const OrganizerDashboard = () => {
     });
 
     try {
-      // Siapkan payload (data yang akan dikirim)
-      // Kita tambah poster_url dummy karena backend mewajibkannya
       const payload = {
         ...data,
-        poster_url: 'https://placehold.co/600x400' // Gambar placeholder sementara
+        poster_url: 'https://placehold.co/600x400' 
       };
 
       if (editingEvent) {
-        // === UPDATE (PUT) ===
-        // Endpoint: PUT /events/:id
         await api.put(`/events/${editingEvent.id}`, payload);
 
         Swal.fire({
@@ -172,8 +184,6 @@ const OrganizerDashboard = () => {
         });
 
       } else {
-        // === CREATE (POST) ===
-        // Endpoint: POST /events
         await api.post('/events', payload);
 
         Swal.fire({
@@ -184,13 +194,11 @@ const OrganizerDashboard = () => {
         });
       }
 
-      // 3. WAJIB: Refresh Tabel dari Database
-      // Panggil fungsi fetchEvents() supaya data terbaru muncul
       fetchEvents();
+      fetchStats();
 
     } catch (error) {
       console.error("Submit Error:", error);
-      // Tampilkan pesan error dari backend jika ada
       const errorMessage = error.response?.data?.message || 'Terjadi kesalahan sistem.';
       Swal.fire({
         icon: 'error',
@@ -216,6 +224,14 @@ const OrganizerDashboard = () => {
         isOpen={isDeleteOpen}
         onClose={() => setIsDeleteOpen(false)}
         onConfirm={confirmDelete}
+      />
+
+      <ParticipantTableModal 
+        isOpen={isParticipantModalOpen}
+        onClose={() => setIsParticipantModalOpen(false)}
+        eventId={viewingEvent?.id} // Kirim ID event ke modal buat fetch API
+        eventTitle={viewingEvent?.title}
+        quota={`${viewingEvent?.quotaFilled || 0}/${viewingEvent?.quotaTotal || 0}`}
       />
 
       <main className="pt-[100px] px-4 md:px-8 pb-10 max-w-7xl mx-auto">

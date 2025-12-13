@@ -4,10 +4,18 @@ import eyeIcon from '../assets/icons/ic-eye.svg';
 import editIcon from '../assets/icons/ic-edit.svg';
 import trashIcon from '../assets/icons/ic-delete-confirm.svg';
 
+const statusStyleMap = {
+  'Berlangsung': 'bg-feedback-successBg text-feedback-success border-feedback-successBorder',
+  'Dibatalkan': 'bg-feedback-dangerBg text-feedback-danger border-feedback-danger',
+  'Akan Datang': 'bg-blue-50 text-blue-500 border-blue-500',
+  'Selesai': 'bg-gray-100 text-gray-600 border-gray-200',
+};
+
+
 const OrganizerEventTable = ({ events, onView, onEdit, onDelete }) => {
   return (
     <div className="overflow-x-auto">
-      <div className="min-w-[900px]"> {/* Min-width biar ga hancur di HP */}
+      <div className="min-w-[900px]">
         
         {/* HEADER TABEL */}
         <div className="bg-neutral-soft border-b border-neutral-border grid grid-cols-12 gap-4 px-6 py-4">
@@ -47,16 +55,16 @@ const OrganizerEventTable = ({ events, onView, onEdit, onDelete }) => {
 
                 {/* Status Badge */}
                 <div className="col-span-2 flex justify-center">
-                  <span className={`text-body px-3 py-1 rounded-full border ${
-                    event.status === 'Berlangsung' 
-                    ? 'bg-feedback-successBg text-feedback-success border-feedback-successBorder'
-                    : 'bg-feedback-dangerBg text-feedback-danger border-feedback-danger'
-                  }`}>
-                    {event.status === 'cancelled'
-                      ? 'Dibatalkan'
-                      : event.status}
+                  <span
+                    className={`text-body px-3 py-1 rounded-full border ${
+                      statusStyleMap[event.status] ||
+                      'bg-neutral-surface text-neutral-secondary border-neutral-border'
+                    }`}
+                  >
+                    {event.status}
                   </span>
                 </div>
+
 
                 {/* Tombol Aksi (Mata, Pensil, Sampah) */}
                 <div className="col-span-2 flex justify-center gap-2">

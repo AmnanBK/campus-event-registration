@@ -2,7 +2,6 @@ import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 
 const EventFormModal = ({ isOpen, onClose, onSubmit, initialData }) => {
-  // 1. SETUP REACT HOOK FORM
   const {
     register,
     handleSubmit,
@@ -11,11 +10,9 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, initialData }) => {
     formState: { errors },
   } = useForm();
 
-  // 2. LOGIC: RESET FORM SAAT MODAL DIBUKA
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
-        // Mode Edit: Isi form dengan data lama
         reset({
           title: initialData.title,
           description: initialData.description,
@@ -24,9 +21,9 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, initialData }) => {
           end_time: initialData.end_time_raw,     // HH:mm
           quota: initialData.quota_total,
           location: initialData.location,
+          
         });
       } else {
-        // Mode Create: Kosongkan form
         reset({
           title: '',
           description: '',
@@ -40,7 +37,6 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, initialData }) => {
     }
   }, [isOpen, initialData, reset]);
 
-  // Pantau value start_time untuk validasi real-time
   const startTimeValue = watch("start_time");
 
   if (!isOpen) return null;

@@ -4,6 +4,8 @@ import EventCard from '../components/EventCard';
 import searchIcon from '../assets/icons/ic-search.svg'; 
 import EventDetailModal from '../components/EventDetailModal'; 
 import HistoryTable from '../components/HistoryTable'; 
+// Pastikan nama filenya sesuai dengan yang kamu buat (CancelConfirmModal atau CancelConfirmModal)
+import CancelConfirmModal from '../components/CancelConfirmModal'; 
 import api from '../services/api';
 import Swal from 'sweetalert2';
 
@@ -12,11 +14,17 @@ const StudentDashboard = () => {
   const [history, setHistory] = useState([]); 
   const [isLoading, setIsLoading] = useState(true);
 
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const [activeTab, setActiveTab] = useState('daftar');
   const [searchQuery, setSearchQuery] = useState('');
 
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // State Modal Konfirmasi
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [cancelTargetId, setCancelTargetId] = useState(null);
 
   const loadData = async () => {
     try {
@@ -74,7 +82,7 @@ const StudentDashboard = () => {
     loadData();
   }, []); 
 
-  // --- HANDLERS MODAL ---
+  // --- HANDLERS MODAL DETAIL ---
   const handleOpenModal = (event) => {
     setSelectedEvent(event);
     setIsModalOpen(true);
@@ -85,9 +93,7 @@ const StudentDashboard = () => {
     setTimeout(() => setSelectedEvent(null), 200);
   };
 
-  // --- HANDLERS AKSI ---
-  
-  // 1. REGISTER
+  // --- HANDLER REGISTER ---
   const handleRegister = async (eventId) => {
     handleCloseModal();
     Swal.fire({ title: 'Mendaftar...', didOpen: () => Swal.showLoading() });
@@ -109,29 +115,49 @@ const StudentDashboard = () => {
     }
   };
 
-  // 2. CANCEL
-  const handleCancelRegistration = async (registrationId) => {
-    handleCloseModal(); // Tutup modal kalau cancel dari modal
-    
-    const result = await Swal.fire({
-      title: 'Batalkan Pendaftaran?',
-      text: "Slot kuota akan dilepas dan Anda harus daftar ulang jika berubah pikiran.",
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#B3261E',
-      cancelButtonColor: '#003366',
-      confirmButtonText: 'Ya, Batalkan'
-    });
+  // --- LOGIKA CANCEL (PERBAIKAN DI SINI) ---
 
-    if (result.isConfirmed) {
-      Swal.fire({ title: 'Memproses...', didOpen: () => Swal.showLoading() });
-      try {
-        await api.delete(`/registrations/${registrationId}`);
-        await loadData(); 
-        Swal.fire('Dibatalkan!', 'Pendaftaran dibatalkan.', 'success');
-      } catch (error) {
-        Swal.fire('Error', 'Gagal membatalkan.', 'error');
-      }
+  // 1. TRIGGER: Hanya Buka Modal & Set ID (Belum Delete)
+  const handleRequestCancel = (registrationId) => {
+    // Tutup detail modal dulu jika terbuka
+    if (isModalOpen) handleCloseModal();
+    
+    // Set Target & Buka Modal Konfirmasi
+    setCancelTargetId(registrationId);
+    setIsCancelModalOpen(true);
+  };
+
+  // 2. EKSEKUSI: Delete Data (Dipanggil tombol "Ya" di Modal Konfirmasi)
+  const executeCancel = async () => {
+    if (!cancelTargetId) return;
+
+    try {
+      setIsDeleting(true); 
+
+      // Panggil API
+      await api.delete(`/registrations/${cancelTargetId}`);
+      
+      // Refresh Data
+      await loadData(); 
+
+      // Tutup Modal & Reset
+      setIsCancelModalOpen(false);
+      setCancelTargetId(null);
+
+      // Notif Sukses
+      Swal.fire({
+        icon: 'success',
+        title: 'Dibatalkan',
+        text: 'Pendaftaran berhasil dibatalkan.',
+        timer: 1500,
+        showConfirmButton: false
+      });
+
+    } catch (error) {
+      console.error("Cancel Error:", error);
+      Swal.fire('Error', 'Gagal membatalkan pendaftaran.', 'error');
+    } finally {
+      setIsDeleting(false); 
     }
   };
 
@@ -148,7 +174,7 @@ const StudentDashboard = () => {
     <div className="min-h-screen bg-primary-surface w-full font-sans">
       <Navbar />
 
-      {/* --- INTEGRASI MODAL BARU --- */}
+      {/* --- EVENT DETAIL MODAL --- */}
       <EventDetailModal 
         isOpen={isModalOpen}
         onClose={handleCloseModal}
@@ -156,14 +182,23 @@ const StudentDashboard = () => {
         
         onRegister={(id) => handleRegister(id)} 
         
+        // Disini kita panggil handleRequestCancel (BUKAN executeCancel)
         onCancel={(eventId) => {
            const evt = events.find(e => e.id === eventId);
            if (evt && evt.registration_id) {
-             handleCancelRegistration(evt.registration_id);
+             handleRequestCancel(evt.registration_id);
            } else {
              Swal.fire('Error', 'Data registrasi tidak ditemukan', 'error');
            }
         }} 
+      />
+
+      {/* --- CANCEL CONFIRM MODAL --- */}
+      <CancelConfirmModal 
+        isOpen={isCancelModalOpen}
+        onClose={() => setIsCancelModalOpen(false)}
+        onConfirm={executeCancel}
+        isLoading={isDeleting}
       />
 
       <main className="pt-[100px] px-4 md:px-8 pb-10 max-w-7xl mx-auto">
@@ -173,13 +208,13 @@ const StudentDashboard = () => {
           <div className="bg-neutral-input p-1 rounded-full flex w-full border border-neutral-border/50">
             <button 
               onClick={() => setActiveTab('daftar')}
-              className={`flex-1 py-2.5 rounded-full text-body font-bold transition-all text-center ${activeTab === 'daftar' ? 'bg-white shadow-sm ring-1 ring-black/5' : 'text-neutral-secondary hover:bg-black/5'}`}
+              className={`flex-1 py-2.5 rounded-full text-body transition-all text-center ${activeTab === 'daftar' ? 'bg-white shadow-sm ring-1 ring-black/5' : 'text-neutral-secondary hover:bg-black/5'}`}
             >
               Daftar Acara
             </button>
             <button 
               onClick={() => setActiveTab('riwayat')}
-              className={`flex-1 py-2.5 rounded-full text-body font-bold transition-all text-center ${activeTab === 'riwayat' ? 'bg-white shadow-sm ring-1 ring-black/5' : 'text-neutral-secondary hover:bg-black/5'}`}
+              className={`flex-1 py-2.5 rounded-full text-body transition-all text-center ${activeTab === 'riwayat' ? 'bg-white shadow-sm ring-1 ring-black/5' : 'text-neutral-secondary hover:bg-black/5'}`}
             >
               Riwayat
             </button>
@@ -197,7 +232,7 @@ const StudentDashboard = () => {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full h-full bg-transparent border-none outline-none text-body"
-                  placeholder="Cari acara..."
+                  placeholder="Cari acara berdasarkan nama atau penyelenggara"
                 />
               </div>
             </div>
@@ -226,7 +261,8 @@ const StudentDashboard = () => {
              ) : (
                <HistoryTable 
                  data={history} 
-                 onCancel={(regId) => handleCancelRegistration(regId)} 
+                 // Disini juga panggil handleRequestCancel
+                 onCancel={(regId) => handleRequestCancel(regId)} 
                />
              )}
           </div>

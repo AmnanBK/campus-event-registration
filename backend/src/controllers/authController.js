@@ -1,6 +1,34 @@
 import supabase from '../config/supabase.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
+
+const algorithm = 'aes-256-cbc';
+const secretKey = Buffer.from(process.env.ENCRYPTION_KEY);
+const ivLength = 16;
+
+// tambahin env ini di .env
+// ENCRYPTION_KEY=12345678901234567890123456789012
+// JWT_SECRET=jwt-secret-key
+
+const encrypt = (text) => {
+  if (!text) return null;
+  const iv = crypto.randomBytes(ivLength);
+  const cipher = crypto.createCipheriv(algorithm, secretKey, iv);
+  let encrypted = cipher.update(text, 'utf8', 'hex');
+  encrypted += cipher.final('hex');
+  return iv.toString('hex') + ':' + encrypted;
+};
+
+const decrypt = (text) => {
+  if (!text) return null;
+  const [ivHex, encryptedText] = text.split(':');
+  const iv = Buffer.from(ivHex, 'hex');
+  const decipher = crypto.createDecipheriv(algorithm, secretKey, iv);
+  let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
+  decrypted += decipher.final('utf8');
+  return decrypted;
+};
 
 export const register = async (req, res) => {
   try {
@@ -29,9 +57,9 @@ export const register = async (req, res) => {
       .insert([
         {
           name,
-          email,
+          email: encrypt(email),
           password: passwordHash,
-          nim: nim || null,
+          nim: encrypt(nim),
           role,
         },
       ])
@@ -53,7 +81,7 @@ export const register = async (req, res) => {
       data: {
         id: data[0].id,
         name: data[0].name,
-        email: data[0].email,
+        email: decrypt(data[0].email),
         role: data[0].role,
       },
     });
@@ -69,11 +97,13 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const { data: user, error } = await supabase
+    const { data: users, error } = await supabase
       .from('users')
       .select('*')
-      .eq('email', email)
-      .single();
+
+    const user = users.find(
+      u => decrypt(u.email) === email
+    );
 
     if (error || !user) {
       return res.status(401).json({
@@ -104,8 +134,8 @@ export const login = async (req, res) => {
         user: {
           id: user.id,
           name: user.name,
-          email: user.email,
-          nim: user.nim,
+          email: decrypt(user.email),
+          nim: decrypt(user.nim),
           role: user.role,
         },
       },

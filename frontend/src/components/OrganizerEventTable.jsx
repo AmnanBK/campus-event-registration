@@ -8,7 +8,7 @@ const statusStyleMap = {
   'Berlangsung': 'bg-feedback-successBg text-feedback-success border-feedback-successBorder',
   'Dibatalkan': 'bg-feedback-dangerBg text-feedback-danger border-feedback-danger',
   'Akan Datang': 'bg-blue-50 text-blue-500 border-blue-500',
-  'Selesai': 'bg-gray-100 text-gray-600 border-gray-200',
+  'Selesai': 'bg-gray-100 text-gray-600 border-gray-600',
 };
 
 

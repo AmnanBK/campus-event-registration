@@ -64,6 +64,9 @@ const StudentDashboard = () => {
         quotaFilled: item.quota_filled || 0,
         quotaTotal: item.quota_total || item.quota,
         image: item.poster_url || "https://placehold.co/600x400?text=No+Image",
+        status: item.status,         
+        start_time: item.start_time,  
+        end_time: item.end_time,
         
         is_registered: !!registrationMap[item.id], 
         registration_id: registrationMap[item.id] || null 
@@ -99,7 +102,7 @@ const StudentDashboard = () => {
     Swal.fire({ title: 'Mendaftar...', didOpen: () => Swal.showLoading() });
 
     try {
-      await api.post(`/registrations/${eventId}`);
+      await api.post(`/events/${eventId}/register`);
       await loadData(); 
       
       Swal.fire({

@@ -46,8 +46,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import StudentDashboard from './pages/StudentDashboard';
 import OrganizerDashboard from './pages/OrganizerDashboard';
-
-const AdminDashboard = () => <h2>Dashboard Kampus</h2>;
+import AdminDashboard from './pages/AdminDashboard';
+import AdminUsersPage from './pages/AdminUsersPage';
 
 function App() {
   return (
@@ -55,7 +55,7 @@ function App() {
       <Router>
         <Routes>
           {/* Public Route */}
-          <Route path="/login" element={<LoginPage/>} />
+          <Route path="/login" element={<LoginPage />} />
 
           {/* Role: Mahasiswa */}
           <Route element={<ProtectedRoute allowedRoles={['student']} />}>
@@ -79,7 +79,8 @@ function App() {
             element={<ProtectedRoute allowedRoles={['admin']} />}
           >
             <Route path="dashboard" element={<AdminDashboard />} />
-            <Route path="users" element={<h2>Kelola User</h2>} />
+            <Route path="users" element={<AdminUsersPage />} />{' '}
+            {/* <--- INI DIGANTI */}
           </Route>
 
           {/* Fallback kalau nyasar */}

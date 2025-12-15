@@ -1,5 +1,6 @@
 import supabase from '../config/supabase.js';
 import { Parser } from 'json2csv';
+import sanitizeHtml from 'sanitize-html';
 
 export const createEvent = async (req, res) => {
   try {
@@ -13,6 +14,10 @@ export const createEvent = async (req, res) => {
       quota,
       poster_url,
     } = req.body;
+
+    const safeDescription = description
+      ? sanitizeHtml(String(description), { allowedTags: [], allowedAttributes: {} }).slice(0, 5000)
+      : null;
 
     const organizer_id = req.user?.id;
 
@@ -65,7 +70,7 @@ export const createEvent = async (req, res) => {
         {
           organizer_id,
           title,
-          description,
+          description: safeDescription,
           start_time: startObj.toISOString(),
           end_time: endObj.toISOString(),
           location,
@@ -105,6 +110,10 @@ export const updateEvent = async (req, res) => {
       poster_url,
     } = req.body;
 
+    const safeDescriptionUpdate = typeof description !== 'undefined' && description !== null
+      ? sanitizeHtml(String(description), { allowedTags: [], allowedAttributes: {} }).slice(0, 5000)
+      : undefined;
+
     const organizer_id = req.user.id;
 
     let startTimestamp, endTimestamp;
@@ -133,7 +142,7 @@ export const updateEvent = async (req, res) => {
 
     const updates = {
       title,
-      description,
+      ...(typeof safeDescriptionUpdate !== 'undefined' ? { description: safeDescriptionUpdate } : {}),
       location,
       quota,
       poster_url,
@@ -352,7 +361,10 @@ export const getAllEvents = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 6;
-    const search = req.query.search || '';
+    const rawSearch = req.query.search || '';
+    const search = typeof rawSearch === 'string'
+      ? rawSearch.replace(/[\x00-\x1F\x7F]/g, '').slice(0, 100)
+      : '';
 
     const from = (page - 1) * limit;
     const to = from + limit - 1;

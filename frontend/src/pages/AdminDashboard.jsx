@@ -1,139 +1,246 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import api from '../services/api';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import Swal from 'sweetalert2';
 
-// Pastikan icon ini ada di folder assets
+// --- IMPORT MODAL YANG BARU DIBUAT ---
+import NewOrganizerFormModal from '../components/NewOrganizerFormModal'; 
+import DeleteConfirmModal from '../components/DeleteConfirmModal';
+
+// Import Icons
 import buildingIcon from '../assets/icons/ic-building.svg';
-import peopleIcon from '../assets/icons/ic-people.svg';
+import userIcon from '../assets/icons/ic-people.svg';
 import calendarIcon from '../assets/icons/ic-calendar.svg';
+import plusIcon from '../assets/icons/ic-add.svg'; 
+import trashIcon from '../assets/icons/ic-delete-confirm.svg';
 
-const AdminDashboard = () => {
+const AdminUsersPage = () => {
+  const location = useLocation();
+  
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   const [stats, setStats] = useState({ total_events: 0, total_participants: 0, total_organizers: 0 });
-  const [chartData, setChartData] = useState([]);
+  const [organizers, setOrganizers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState(null);
+
+  const fetchData = async () => {
+    try {
+      setIsLoading(true);
+      const [statsRes, orgRes] = await Promise.all([
+        api.get('/admin/stats'),
+        api.get('/admin/organizers')
+      ]);
+      setStats(statsRes.data.data);
+      setOrganizers(orgRes.data.data);
+    } catch (error) {
+      console.error("Error loading users page:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setIsLoading(true);
-        const [statsRes, orgRes] = await Promise.all([
-          api.get('/admin/stats'),
-          api.get('/admin/organizers')
-        ]);
-        
-        setStats(statsRes.data.data);
-        
-        const formattedData = orgRes.data.data.map(org => ({
-          name: org.name,
-          'Jumlah Acara': org.total_events
-        }));
-        setChartData(formattedData);
-      } catch (error) {
-        console.error("Error loading dashboard:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
     fetchData();
   }, []);
 
+  // --- HANDLER BUKA MODAL ---
+  const handleCreate = () => {
+    setIsModalOpen(true);
+  };
+
+  // --- HANDLER SUBMIT DATA (Dipanggil dari Modal) ---
+  const handleSubmitOrganizer = async (data) => {
+    try {
+      // API Call
+      await api.post('/admin/organizers', data);
+      
+      // Notifikasi Sukses
+      Swal.fire({
+        icon: 'success',
+        title: 'Berhasil!',
+        text: 'Akun mitra berhasil ditambahkan.',
+        confirmButtonColor: '#003366',
+        timer: 1500
+      });
+      
+      // Tutup Modal & Refresh Data
+      setIsModalOpen(false);
+      fetchData();
+
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: error.response?.data?.message || 'Gagal membuat akun.',
+        confirmButtonColor: '#003366'
+      });
+    }
+  };
+
+  const handleDeleteClick = (id) => {
+    setDeleteTargetId(id);
+    setIsDeleteModalOpen(true);
+  };
+
+  // 2. Eksekusi saat tombol "YA" diklik di Modal
+  const handleDelete = async () => {
+    if (!deleteTargetId) return;
+
+    try {
+      // Simulasi sukses 
+      console.log("Menghapus ID:", deleteTargetId);
+
+      // Tutup Modal & Reset Target
+      setIsDeleteModalOpen(false);
+      setDeleteTargetId(null);
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Terhapus!',
+        text: 'Data berhasil dihapus.',
+        showConfirmButton: false,
+        timer: 1500
+      });
+
+      fetchData();
+
+    } catch (error) {
+      setIsDeleteModalOpen(false);
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal',
+        text: error.response?.data?.message || 'Gagal menghapus data.',
+        confirmButtonColor: '#003366'
+      });
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-neutral-soft font-sans">
+    <div className="min-h-screen bg-[#F5F8FA] font-sans">
       <Navbar />
       
+      <NewOrganizerFormModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleSubmitOrganizer}
+      />
+
+      <DeleteConfirmModal 
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleDelete}
+        title="Hapus Penyelenggara?"
+        message="Apakah Anda yakin ingin menghapus akun penyelenggara ini? Data yang dihapus tidak dapat dikembalikan."
+      />
+      
       <main className="pt-[100px] px-4 md:px-8 pb-10 max-w-7xl mx-auto">
-        <h1 className="text-h2 text-neutral-main mb-6">Dashboard Admin</h1>
+        
+        {/* --- CARDS STATISTIK --- */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            {/* Card 1 */}
+            <div className="bg-white p-6 rounded-xl border border-neutral-border shadow-sm flex flex-col justify-between h-[120px]">
+                <div className="flex justify-between items-start">
+                    <span className="text-neutral-secondary text-body text-sm">Total Acara</span>
+                    <img src={calendarIcon} alt="" className="w-5 h-5 text-primary-main opacity-70" />
+                </div>
+                <h3 className="text-[32px] text-primary-main mt-auto">
+                    {stats.total_events}
+                </h3>
+            </div>
+            
+            {/* Card 2 */}
+            <div className="bg-white p-6 rounded-xl border border-neutral-border shadow-sm flex flex-col justify-between h-[120px]">
+                <div className="flex justify-between items-start">
+                    <span className="text-neutral-secondary text-body text-sm">Total Pendaftar</span>
+                    <img src={userIcon} alt="" className="w-5 h-5 text-primary-main opacity-70" />
+                </div>
+                <h3 className="text-[32px] text-primary-main mt-auto">
+                    {stats.total_participants}
+                </h3>
+            </div>
 
-        {/* --- HEADER SECTION: BOX HIJAU & TAB SEJAJAR --- */}
-        <div className="flex flex-col xl:flex-row gap-6 mb-8 items-stretch">
+            {/* Card 3 */}
+            <div className="bg-white p-6 rounded-xl border border-neutral-border shadow-sm flex flex-col justify-between h-[120px]">
+                <div className="flex justify-between items-start">
+                    <span className="text-neutral-secondary text-body text-sm">Jumlah Penyelenggara</span>
+                    <img src={buildingIcon} alt="" className="w-5 h-5 text-primary-main opacity-70" />
+                </div>
+                <h3 className="text-[32px] text-primary-main mt-auto">
+                    {stats.total_organizers}
+                </h3>
+            </div>
+        </div>
+
+        {/* --- DAFTAR PENYELENGGARA --- */}
+        <div className="bg-white rounded-xl shadow-sm border border-neutral-border overflow-hidden">
           
-          {/* 1. KOTAK HIJAU (STATS) */}
-          <div className="bg-gradient-to-r from-emerald-600 to-teal-600 rounded-2xl p-6 shadow-lg text-white flex-1 flex items-center">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full divide-y md:divide-y-0 md:divide-x divide-white/20">
-              
-              {/* Stat 1 */}
-              <div className="flex items-center gap-4 px-4">
-                <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
-                  {/* Filter brightness-0 invert membuat icon jadi putih */}
-                  <img src={calendarIcon} className="w-8 h-8 brightness-0 invert" alt=""/>
-                </div>
-                <div>
-                  <p className="text-sm font-medium opacity-90">Total Acara</p>
-                  <h3 className="text-3xl font-bold">{stats.total_events}</h3>
-                </div>
-              </div>
+          {/* Header Section */}
+          <div className="p-6 border-b border-neutral-border flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-[#F9FAFB]">
+             <div>
+                <h3 className="text-[18px] text-neutral-main">Daftar Penyelenggara Acara</h3>
+                <p className="text-[15px] text-neutral-secondary mt-1">Kelola akun penyelenggara dan berikan akses</p>
+             </div>
+             <button 
+                onClick={handleCreate} 
+                className="bg-[#003366] hover:bg-[#002244] text-white px-5 py-2.5 rounded-lg text-body flex items-center gap-2 transition-colors shadow-sm"
+              >
+                <img src={plusIcon} alt="" className="w-4 h-4 invert brightness-0" /> Buat Akun Penyelenggara
+              </button>
+          </div>
 
-              {/* Stat 2 */}
-              <div className="flex items-center gap-4 px-4 pt-4 md:pt-0">
-                <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
-                  <img src={peopleIcon} className="w-8 h-8 brightness-0 invert" alt=""/>
-                </div>
-                <div>
-                  <p className="text-sm font-medium opacity-90">Total Partisipan</p>
-                  <h3 className="text-3xl font-bold">{stats.total_participants}</h3>
-                </div>
-              </div>
-
-              {/* Stat 3 */}
-              <div className="flex items-center gap-4 px-4 pt-4 md:pt-0">
-                <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
-                  <img src={buildingIcon} className="w-8 h-8 brightness-0 invert" alt=""/>
-                </div>
-                <div>
-                  <p className="text-sm font-medium opacity-90">Mitra Penyelenggara</p>
-                  <h3 className="text-3xl font-bold">{stats.total_organizers}</h3>
-                </div>
-              </div>
-
+          {/* TABEL AREA */}
+          <div className="p-6">
+            <div className="border border-neutral-border rounded-lg overflow-hidden">
+                <table className="w-full text-left">
+                    <thead className="bg-[#F8F9FA] border-b border-neutral-border">
+                        <tr>
+                            <th className="py-4 px-4 text-table-header text-neutral-secondary w-[25%]">Penyelenggara</th>
+                            <th className="py-4 px-4 text-table-header text-neutral-secondary w-[30%]">E-mail</th>
+                            <th className="py-4 px-4 text-table-header text-neutral-secondary w-[15%]">Total Acara</th>
+                            <th className="py-4 px-4 text-table-header text-neutral-secondary w-[15%]">Total Peserta</th>
+                            {/* <th className="py-4 px-4 text-table-header text-neutral-secondary w-[15%] text-center">Aksi</th> */}
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-border">
+                        {isLoading ? (
+                            <tr>
+                                <td colSpan="5" className="py-12 text-center text-neutral-secondary">
+                                    <div className="flex flex-col items-center gap-2">
+                                        <span className="w-6 h-6 border-2 border-primary-main/30 border-t-primary-main rounded-full animate-spin"></span>
+                                        <span>Memuat data...</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        ) : organizers.length > 0 ? (
+                            organizers.map((org) => (
+                                <tr key={org.id} className="hover:bg-neutral-50 transition-colors">
+                                    <td className="py-4 px-4 text-body text-neutral-main">{org.name}</td>
+                                    <td className="py-4 px-4 text-body text-neutral-secondary">{org.email}</td>
+                                    <td className="py-4 px-4 text-body text-neutral-secondary">{org.total_events}</td>
+                                    <td className="py-4 px-4 text-body text-neutral-secondary">{org.total_participants}</td>
+                                    {/* <td className="py-4 px-4 text-center">
+                                        <button onClick={() => handleDeleteClick(org.id)} className="p-2 rounded-lg border border-feedback-danger/20 hover:bg-feedback-dangerBg transition-colors" title="Hapus Acara">
+                                            <img src={trashIcon} alt="Delete" className="w-4 h-4" />
+                                        </button>
+                                    </td> */}
+                                </tr>
+                            ))
+                        ) : (
+                            <tr>
+                                <td colSpan="5" className="py-12 text-center text-neutral-secondary">
+                                    Belum ada data penyelenggara.
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
             </div>
           </div>
 
-          {/* 2. TAB NAVIGASI (SEJAJAR DI KANAN) */}
-          <div className="bg-white rounded-2xl p-2 shadow-sm border border-neutral-border flex flex-row xl:flex-col gap-2 min-w-[200px]">
-             {/* Tombol Analytics (AKTIF) */}
-             <div className="flex-1 bg-primary-surface/50 rounded-xl flex items-center justify-center px-6 py-3 border-2 border-primary-main text-primary-main font-bold cursor-default transition-all">
-                Analytics
-             </div>
-
-             {/* Tombol Users (LINK) */}
-             <Link 
-               to="/admin/users" 
-               className="flex-1 bg-transparent rounded-xl flex items-center justify-center px-6 py-3 text-neutral-secondary hover:bg-neutral-soft font-medium transition-all"
-             >
-                Kelola Penyelenggara
-             </Link>
-          </div>
-
-        </div>
-
-        {/* --- KONTEN (GRAFIK) --- */}
-        <div className="bg-white rounded-2xl shadow-sm border border-neutral-border p-8 min-h-[400px]">
-          <h3 className="text-[18px] font-bold text-neutral-main mb-6">Grafik Keaktifan Mitra</h3>
-          <div className="w-full h-[400px]">
-            {isLoading ? (
-              <div className="h-full flex items-center justify-center text-neutral-secondary">Memuat data...</div>
-            ) : chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={{top:20, right:30, left:20, bottom:5}}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#757575', fontSize: 12}} />
-                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#757575', fontSize: 12}} />
-                  <Tooltip 
-                    cursor={{fill: '#F8F9FA'}} 
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)' }}
-                  />
-                  <Legend wrapperStyle={{paddingTop:'20px'}}/>
-                  <Bar dataKey="Jumlah Acara" fill="#059669" radius={[6,6,0,0]} barSize={50} name="Total Acara" />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex flex-col items-center justify-center text-neutral-secondary bg-neutral-soft/30 rounded-xl">
-                <p>Belum ada data statistik.</p>
-              </div>
-            )}
-          </div>
         </div>
 
       </main>
@@ -141,4 +248,4 @@ const AdminDashboard = () => {
   );
 };
 
-export default AdminDashboard;
+export default AdminUsersPage;

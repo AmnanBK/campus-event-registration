@@ -47,7 +47,7 @@ import LoginPage from './pages/LoginPage';
 import StudentDashboard from './pages/StudentDashboard';
 import OrganizerDashboard from './pages/OrganizerDashboard';
 import AdminDashboard from './pages/AdminDashboard';
-import AdminUsersPage from './pages/AdminUsersPage';
+
 
 function App() {
   return (
@@ -79,7 +79,6 @@ function App() {
             element={<ProtectedRoute allowedRoles={['admin']} />}
           >
             <Route path="dashboard" element={<AdminDashboard />} />
-            <Route path="users" element={<AdminUsersPage />} />{' '}
             {/* <--- INI DIGANTI */}
           </Route>
 
